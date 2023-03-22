@@ -139,7 +139,7 @@ def main(data):
             error_message = str(e)
             if "TokenDistributor: nothing to claim" in error_message:
                 arb_balance = get_balance(address, w3) #НА ВСЯКИЙ СЛУЧАЙ ПРОБУЕМ ПРОВЕРИТЬ БАЛАНС
-                if arb_balance < 0:
+                if arb_balance == 0:
                     print(f'{address} | Нечего клеймить, завершаю работу: {e}')
                     return address, "not_claimed"
                 else:
@@ -185,6 +185,8 @@ def main(data):
                     sleep(0.5)
                 if loop_done_check:
                     break
+            elif swap_status == 'not_swapped':
+                return address, 'not_swapped'
             else:
                 print(f'{address} | Ошибка свапа, пробую снова')
                 sleep(0.5)

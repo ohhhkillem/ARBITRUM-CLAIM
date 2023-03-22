@@ -44,8 +44,10 @@ def inch_approve(data):
 if __name__ == "__main__":
     with open('data.txt', 'r') as f:
         data = f.read().splitlines()
+        
+    max_processes = 60 #МАКС. КОЛ-ВО ПОТОКОВ, У МЕНЯ МАКСИМУМ ВЫШЛО 60, МОЖНО ПОПРОБОВАТЬ ПОМЕНЯТЬ
+    num_processes = min(len(data), max_processes)
 
-    with multiprocessing.Pool(multiprocessing.cpu_count() * 3) as p:
-        p.map(inch_approve, data)
-        p.join()
-        print('Апрув "ARB" для всех аккаунтов завершён!')
+    with multiprocessing.Pool(num_processes) as p:
+        results = p.map(inch_approve, data)
+    print('Апрув "ARB" для всех аккаунтов завершён!')

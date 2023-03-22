@@ -22,9 +22,13 @@ def inch_approve(data):
     try:
         amount_to_approve = get_claimable_tokens(address, w3)
         print(f'{address} | Аппруваю {amount_to_approve/10**18} токенов')
-        inchurl = f'https://api.1inch.io/v4.0/42161/approve/transaction?tokenAddress={ARB_ADDRESS}&amount={amount_to_approve}'
-        print(inchurl)
-        json_data = requests.get(inchurl)
+        for i in range(25):
+            inchurl = f'https://api.1inch.io/v4.0/42161/approve/transaction?tokenAddress={ARB_ADDRESS}&amount={amount_to_approve}'
+            json_data = requests.get(inchurl)
+            if json_data.status_code != 200:
+                pass
+            else:
+                break
         api_data = json_data.json()
         nonce = w3.eth.get_transaction_count(address)
         transaction = {
@@ -46,7 +50,7 @@ if __name__ == "__main__":
     with open('data.txt', 'r') as f:
         data = f.read().splitlines()
 
-    max_processes = 2
+    max_processes = 5 #МАКС КОЛ-ВО ПОТОКОВ
     num_processes = min(len(data), max_processes)
 
     with multiprocessing.Pool(num_processes) as p:

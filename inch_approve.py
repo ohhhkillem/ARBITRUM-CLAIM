@@ -21,8 +21,9 @@ def inch_approve(data):
     print(f'{address} | Делаю апрув ARB')
     try:
         amount_to_approve = get_claimable_tokens(address, w3)
-        #amount_to_approve = 100000000000000000000000
+        print(f'{address} | Аппруваю {amount_to_approve/10**18} токенов')
         inchurl = f'https://api.1inch.io/v4.0/42161/approve/transaction?tokenAddress={ARB_ADDRESS}&amount={amount_to_approve}'
+        print(inchurl)
         json_data = requests.get(inchurl)
         api_data = json_data.json()
         nonce = w3.eth.get_transaction_count(address)
@@ -31,7 +32,7 @@ def inch_approve(data):
             "to": w3.to_checksum_address(api_data["to"]),
             "data": api_data["data"],
             "gasPrice": w3.eth.gas_price,
-            "gas": 2000000
+            "gas": 3000000
         }
 
         sign_transaction = account.sign_transaction(transaction)
@@ -44,10 +45,11 @@ def inch_approve(data):
 if __name__ == "__main__":
     with open('data.txt', 'r') as f:
         data = f.read().splitlines()
-        
-    max_processes = 60 #МАКС. КОЛ-ВО ПОТОКОВ, У МЕНЯ МАКСИМУМ ВЫШЛО 60, МОЖНО ПОПРОБОВАТЬ ПОМЕНЯТЬ
+
+    max_processes = 2
     num_processes = min(len(data), max_processes)
 
     with multiprocessing.Pool(num_processes) as p:
         results = p.map(inch_approve, data)
+
     print('Апрув "ARB" для всех аккаунтов завершён!')

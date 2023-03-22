@@ -1,4 +1,4 @@
-from time import sleep
+from time import sleep, time
 from web3 import Web3
 import multiprocessing
 from config import *
@@ -181,20 +181,39 @@ def main(data):
     print(f'{address} | Работа завершена!')
     return address, "completed"
 
-def wait_claim_block(): #ЖДЁМ НУЖНЫЙ БЛОК
-    eth_mainnet = Web3(Web3.HTTPProvider('https://eth.llamarpc.com'))
-    block_number = eth_mainnet.eth.block_number
-    while block_number <= 16890400:
-        print(f"Текущий блок: {eth_mainnet.eth.block_number}. Ждём блока 16890400...")
-        block_number = eth_mainnet.eth.block_number
-        sleep(0.1)
+def get_l1_block_number():
+    if RPC_URL:
+        _RPC_URL = RPC_URL
+    else:
+        _RPC_URL = 'https://rpc.ankr.com/arbitrum'
+    w3 = Web3(Web3.HTTPProvider(_RPC_URL))
+    try:
+        multicall_contract = w3.eth.contract(address=MULTICALL_ADDRESS, abi=MULTICALL_ABI)
+        return multicall_contract.functions.getL1BlockNumber().call()
+    except:
+        print('RPC не отвечает! Не могу получить текущий блок')
+        return 0
+
+def wait_claim_block():
+    target_timestamp = 1679574000
+    target_block = 16890400
+    print('Начинаю ждать примерного времени начала клейма (-10 минут), после этого начну проверять блок')
+    while True:
+        if int(time()) >= target_timestamp:
+            break
+        sleep(1)
+    while True:
+        current_block = get_l1_block_number()
+        if current_block >= target_block:
+            break
+        print(f"Текущий блок: {current_block}, ждём блок: {target_block}")
+        sleep(4)
 
 if __name__ == "__main__":
     with open('data.txt', 'r') as f:
         data = f.read().splitlines()
 
     wait_claim_block() #ЖДЁМ НУЖНЫЙ БЛОК
-
     max_processes = 60 #МАКС. КОЛ-ВО ПОТОКОВ, У МЕНЯ МАКСИМУМ ВЫШЛО 60, МОЖНО ПОПРОБОВАТЬ ПОМЕНЯТЬ
     num_processes = min(len(data), max_processes)
 

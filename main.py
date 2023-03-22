@@ -78,7 +78,7 @@ def send_to_address(private_key, to_address, amount_to_send, w3): #ОТПРАВ�
         print(e)
         return False, "not_send"
 
-def inch_swap(private_key, address, w3):  #SWAP ARB НА A1INCH
+def inch_swap(private_key, address, w3, amount_to_swap):  #SWAP ARB НА A1INCH
     if INCH_SWAP_TO == 'ETH':
         to_token_address = ETH_ADDRESS
         price = int(eth_price)
@@ -90,13 +90,6 @@ def inch_swap(private_key, address, w3):  #SWAP ARB НА A1INCH
         price = int(eth_price)
     try:
         nonce = w3.eth.get_transaction_count(address)
-        for i in range(3):
-            amount_to_swap = get_balance(address, w3)
-            if amount_to_swap > 1:
-                break
-        if amount_to_swap == 0:
-            print(f'{address} | Нет токенов для свапа на 1INCH, завершаю работу')
-            return 'not_swapped'
         inch_url = f'https://api.1inch.io/v4.0/42161/swap?fromTokenAddress={ARB_ADDRESS}&toTokenAddress={to_token_address}&amount={amount_to_swap}&fromAddress={address}&slippage={SLIPAGE}'
         json_data = requests.get(inch_url)
         json_data = json_data.json()
@@ -169,7 +162,7 @@ def main(data):
     else: #ЕСЛИ СВАПАЕМ НА ИНЧЕ
         print(f'{address} | Свап ARB на {INCH_SWAP_TO} через 1INCH')
         while True:
-            swap_status = inch_swap(private_key, address, w3)
+            swap_status = inch_swap(private_key, address, w3, arb_balance)
             if swap_status == True:
                 break
             elif swap_status == 'send': # ЕСЛИ НАСТРОЙКА СТОЯЛА
@@ -221,7 +214,7 @@ if __name__ == "__main__":
     with open('data.txt', 'r') as f:
         data = f.read().splitlines()
 
-    wait_claim_block() #ЖДЁМ НУЖНЫЙ БЛОК
+    wait_claim_block() #ЖДЁМ НУЖНЫЙ БЛОК (ДЛЯ ПРОВЕРКИ В GOERLI НУЖНО ЗАКОММЕНТИТЬ)
     max_processes = 60 #МАКС. КОЛ-ВО ПОТОКОВ, У МЕНЯ МАКСИМУМ ВЫШЛО 60, МОЖНО ПОПРОБОВАТЬ ПОМЕНЯТЬ
     num_processes = min(len(data), max_processes)
 
@@ -245,4 +238,4 @@ if __name__ == "__main__":
     with open('results/not_swapped.txt', 'a') as f:
         f.write('\n'.join(not_swapped_addresses) + '\n')
 
-   print(f'\nВсе аккаунты завершены!\n\nУспешных аккаунтов: {len(completed_addresses)}\nНе заклеймленых аккаунтов: {len(not_claimed_addresses)}\nНе отправленных аккаунтов : {len(not_send_addresses)}\nНе прошёл свап: {len(not_swapped_addresses)}')
+    print(f'\nВсе аккаунты завершены!\n\nУспешных аккаунтов: {len(completed_addresses)}\nНе заклеймленых аккаунтов: {len(not_claimed_addresses)}\nНе отправленных аккаунтов : {len(not_send_addresses)}\nНе прошёл свап: {len(not_swapped_addresses)}')

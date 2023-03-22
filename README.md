@@ -1,6 +1,8 @@
 
 # ARBITRUM CLAIMER
 
+by https://t.me/cryptohyeta
+
 
 ## Настройки
 

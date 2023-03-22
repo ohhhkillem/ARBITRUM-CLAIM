@@ -105,7 +105,7 @@ def inch_swap(private_key, address, w3):  #SWAP ARB НА A1INCH
         tx = json_data['tx']
         tx['nonce'] = nonce
         tx['to'] = Web3.to_checksum_address(tx['to'])
-        tx['gasPrice'] = int(tx['gasPrice'] * GAS_PRICE_MULTIPLIER)
+        tx['gasPrice'] = int(tx['gasPrice'])
         tx['value'] = int(tx['value'])
         sign_transaction = w3.eth.account.sign_transaction(tx, private_key)
         transaction_hash = w3.eth.send_raw_transaction(sign_transaction.rawTransaction)

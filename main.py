@@ -90,7 +90,13 @@ def inch_swap(private_key, address, w3):  #SWAP ARB НА A1INCH
         price = int(eth_price)
     try:
         nonce = w3.eth.get_transaction_count(address)
-        amount_to_swap = get_balance(address, w3)
+        for i in range(3):
+            amount_to_swap = get_balance(address, w3)
+            if amount_to_swap > 1:
+                break
+        if amount_to_swap == 0:
+            print(f'{address} | Нет токенов для свапа на 1INCH, завершаю работу')
+            return 'not_swapped'
         inch_url = f'https://api.1inch.io/v4.0/42161/swap?fromTokenAddress={ARB_ADDRESS}&toTokenAddress={to_token_address}&amount={amount_to_swap}&fromAddress={address}&slippage={SLIPAGE}'
         json_data = requests.get(inch_url)
         json_data = json_data.json()
@@ -101,7 +107,6 @@ def inch_swap(private_key, address, w3):  #SWAP ARB НА A1INCH
                 return 'send'
             else:
                 return False
-
         tx = json_data['tx']
         tx['nonce'] = nonce
         tx['to'] = Web3.to_checksum_address(tx['to'])
@@ -133,8 +138,13 @@ def main(data):
         except Exception as e:
             error_message = str(e)
             if "TokenDistributor: nothing to claim" in error_message:
-                print(f'{address} | Нечего клеймить, завершаю работу: {e}')
-                return address, "not_claimed"
+                arb_balance = get_balance(address, w3) #НА ВСЯКИЙ СЛУЧАЙ ПРОБУЕМ ПРОВЕРИТЬ БАЛАНС
+                if arb_balance < 0:
+                    print(f'{address} | Нечего клеймить, завершаю работу: {e}')
+                    return address, "not_claimed"
+                else:
+                    print(f'{address} | Заклеймил')
+                    break
             print(f'{address} | Ошибка клейма, пробую снова: {e}')
             sleep(0.5)
     print(f'{address} | Получаем баланс ARB')
@@ -219,6 +229,7 @@ if __name__ == "__main__":
     completed_addresses = [result[0] for result in results if result[1] == "completed"]
     not_claimed_addresses = [result[0] for result in results if result[1] == "not_claimed"]
     not_send_addresses = [result[0] for result in results if result[1] == "not_send"]
+    not_swapped_addresses = [result[0] for result in results if result[1] == "not_swapped"]
 
     with open('results/done.txt', 'a') as f:
         f.write('\n'.join(completed_addresses) + '\n')
@@ -229,4 +240,7 @@ if __name__ == "__main__":
     with open('results/not_send.txt', 'a') as f:
         f.write('\n'.join(not_send_addresses) + '\n')
 
-    print(f'\nВсе аккаунты завершены!\n\nУспешных аккаунтов: {len(completed_addresses)}\nНе заклеймленых аккаунтов: {len(not_claimed_addresses)}\nНе отправленных аккаунтов : {len(not_send_addresses)}')
+    with open('results/not_swapped.txt', 'a') as f:
+        f.write('\n'.join(not_swapped_addresses) + '\n')
+
+   print(f'\nВсе аккаунты завершены!\n\nУспешных аккаунтов: {len(completed_addresses)}\nНе заклеймленых аккаунтов: {len(not_claimed_addresses)}\nНе отправленных аккаунтов : {len(not_send_addresses)}\nНе прошёл свап: {len(not_swapped_addresses)}')

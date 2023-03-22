@@ -182,11 +182,7 @@ def main(data):
     return address, "completed"
 
 def get_l1_block_number():
-    if RPC_URL:
-        _RPC_URL = RPC_URL
-    else:
-        _RPC_URL = 'https://rpc.ankr.com/arbitrum'
-    w3 = Web3(Web3.HTTPProvider(_RPC_URL))
+    w3 = Web3(Web3.HTTPProvider(CHECK_BLOCK_RPC))
     try:
         multicall_contract = w3.eth.contract(address=MULTICALL_ADDRESS, abi=MULTICALL_ABI)
         return multicall_contract.functions.getL1BlockNumber().call()

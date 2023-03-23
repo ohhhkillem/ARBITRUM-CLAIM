@@ -91,10 +91,21 @@ def inch_swap(private_key, address, w3, amount_to_swap):  #SWAP ARB НА A1INCH
     try:
         nonce = w3.eth.get_transaction_count(address)
         inch_url = f'https://api.1inch.io/v4.0/42161/swap?fromTokenAddress={ARB_ADDRESS}&toTokenAddress={to_token_address}&amount={amount_to_swap}&fromAddress={address}&slippage={SLIPAGE}'
-        json_data = requests.get(inch_url)
+        for i in range(4):
+            json_data = requests.get(inch_url)
+            if json_data.status_code != 200:
+                pass
+            else:
+                break
         json_data = json_data.json()
+        if json_data['statusCode'] != 200:
+            print(f'{address} | Ошибка свапа: {json_data["error"]} - {json_data["description"]}')
+            if SEND_IF_BAD_PRICE:
+                return 'send'
+            else:
+                return 'not_swapped'
         #ПРОВЕРКА ЦЕНЫ 1INCH
-        if int(json_data.get('toTokenAmount')) / amount_to_swap * price < MIN_PRICE:
+        if int(json_data.get('toTokenAmount')) / int(amount_to_swap) * price < MIN_PRICE:
             print(f'{address} | Цена ARB меньше {MIN_PRICE}')
             if SEND_IF_BAD_PRICE:
                 return 'send'
@@ -110,8 +121,10 @@ def inch_swap(private_key, address, w3, amount_to_swap):  #SWAP ARB НА A1INCH
         status = transaction_verification(transaction_hash, w3)
         return status
     except Exception as e:
-        print(e)
-        return False
+        if SEND_IF_BAD_PRICE:
+            return 'send'
+        else:
+            return False
 
 def main(data):
     if RPC_URL == '':
@@ -130,7 +143,7 @@ def main(data):
                 break
         except Exception as e:
             error_message = str(e)
-            if "TokenDistributor: nothing to claim" in error_message:
+            if "TokenDistributor: nothing to claim" in error_message or "can't execute this request" in error_message:
                 arb_balance = get_balance(address, w3) #НА ВСЯКИЙ СЛУЧАЙ ПРОБУЕМ ПРОВЕРИТЬ БАЛАНС
                 if arb_balance == 0:
                     print(f'{address} | Нечего клеймить, завершаю работу: {e}')
@@ -166,14 +179,17 @@ def main(data):
             if swap_status == True:
                 break
             elif swap_status == 'send': # ЕСЛИ НАСТРОЙКА СТОЯЛА
-                print(f'{address} | На 1inch плохая цена, отправляю "ARB" ({arb_balance / 10 ** 18}) на адрес {to_address}')
+                print(f'{address} | На 1inch плохая цена (или другая ошибка), отправляю "ARB" ({arb_balance / 10 ** 18}) на адрес {to_address}')
                 loop_done_check = False
                 while True:
-                    send_status = send_to_address(private_key, to_address, arb_balance, w3)
+                    send_status, status_message = send_to_address(private_key, to_address, arb_balance, w3)
                     if send_status:
-                        print(f'{address} | Успешно отправили "ARB" ({arb_balance / 10 ** 18}) на адрес {to_address}')
-                        loop_done_check = True
-                        break
+                        if status_message == "sent":
+                            print(f'{address} | Успешно отправили "ARB" ({arb_balance / 10 ** 18}) на адрес {to_address}')
+                            loop_done_check = True
+                            break
+                        elif status_message == "not_send":
+                            print(f'{address} | Не удалось отправить "ARB" из-за недостаточных средств для оплаты газа')
                     print(f'{address} | Ошибка отправки, пробую снова')
                     sleep(0.5)
                 if loop_done_check:
@@ -208,14 +224,14 @@ def wait_claim_block():
         if current_block >= target_block:
             break
         print(f"Текущий блок: {current_block}, ждём блок: {target_block}")
-        sleep(4)
+        sleep(2)
 
 if __name__ == "__main__":
     with open('data.txt', 'r') as f:
         data = f.read().splitlines()
 
     wait_claim_block() #ЖДЁМ НУЖНЫЙ БЛОК (ДЛЯ ПРОВЕРКИ В GOERLI НУЖНО ЗАКОММЕНТИТЬ)
-    max_processes = 60 #МАКС. КОЛ-ВО ПОТОКОВ, У МЕНЯ МАКСИМУМ ВЫШЛО 60, МОЖНО ПОПРОБОВАТЬ ПОМЕНЯТЬ
+    max_processes = 50 #МАКС. КОЛ-ВО ПОТОКОВ, У МЕНЯ МАКСИМУМ ВЫШЛО 60, МОЖНО ПОПРОБОВАТЬ ПОМЕНЯТЬ
     num_processes = min(len(data), max_processes)
 
     with multiprocessing.Pool(num_processes) as p:
